@@ -42,6 +42,16 @@ def split_into_batches(items, size):
     for i in range(0, len(items), size):
         yield items[i:i + size]
 
+# Check for existing XML to resume from
+def check_resume_scan():
+    nmap_output_folder = os.path.join(BASE_FOLDER, "nmap")
+    xml_files = [os.path.join(nmap_output_folder, f) for f in os.listdir(nmap_output_folder) if f.endswith("_services.xml")]
+    if xml_files:
+        choice = input("[*] Found previous Nmap XML outputs. Resume from them? (yes/no): ").strip().lower()
+        if choice == "yes":
+            return xml_files
+    return None
+
 # Nmap full scan
 def run_nmap_scan(target_file, batch_size):
     with open(target_file, 'r') as f:
@@ -56,7 +66,7 @@ def run_nmap_scan(target_file, batch_size):
         with open(batch_file, 'w') as f:
             f.write('\n'.join(batch))
 
-        output_path = os.path.join(nmap_output_folder, f"nmap_scan_{TIMESTAMP}_batch_{idx}")
+        output_path = os.path.join(nmap_output_folder, f"nmap_scan_batch_{idx}")
         cmd_full = f"nmap -p- -T4 -iL {batch_file} -oA {output_path}_allports"
         print(f"[*] Running full TCP port scan for batch {idx}...")
         subprocess.run(cmd_full, shell=True)
@@ -205,18 +215,24 @@ def main():
         print("[!] Invalid batch size entered.")
         sys.exit(1)
 
-    mode = input("Run full scan? (yes/no): ").strip().lower()
-    if mode not in ["yes", "no"]:
-        print("[!] Invalid choice.")
-        sys.exit(1)
+    xml_outputs = check_resume_scan()
+    if not xml_outputs:
+        xml_outputs = run_nmap_scan(target_file, batch_size)
 
-    xml_outputs = run_nmap_scan(target_file, batch_size)
     targets = parse_nmap_xml(xml_outputs)
 
-    if mode == "yes":
+    mode = input("Which scans do you want to run? [all/testssl/nikto/ffuf/ssh/none]: ").strip().lower()
+    if mode == "all":
         prepare_and_run_scans(targets)
-    else:
+    elif mode == "none":
         print("[*] Only Nmap scan completed. Other scans skipped.")
+    else:
+        # Filter scan types
+        if mode in ["testssl", "nikto", "ffuf", "ssh"]:
+            filtered_targets = {k: v for k, v in targets.items() if k.startswith(mode)}
+            prepare_and_run_scans(filtered_targets)
+        else:
+            print("[!] Unknown scan type.")
 
 if __name__ == "__main__":
     main()
