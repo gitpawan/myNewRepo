@@ -1,3 +1,14 @@
+sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+
+skip-spider
+
+sudo rm -f /var/lib/mysql/aria_log*
+
+# Force the system database structures to deploy cleanly
+sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+
+
+
 # 1. Stop the database service safely
 sudo systemctl stop mariadb
 
