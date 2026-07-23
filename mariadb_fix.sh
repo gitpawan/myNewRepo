@@ -1,66 +1,38 @@
-# 1. Uninstall the server and purge its persistent configuration files
-sudo apt purge -y mariadb-server mariadb-client mariadb-common
+# 1. Delete the manual override configuration folder
+sudo rm -rf /etc/systemd/system/mariadb.service.d
 
-# 2. Obliterate any remnant database files and local configuration tweaks
-sudo rm -rf /var/lib/mysql /etc/mysql /etc/my.cnf /var/log/mysql
+# 2. Tell systemd to reload its unit files
+sudo systemctl daemon-reload
 
-# 1. Uninstall the server and purge its persistent configuration files
-sudo apt purge -y mariadb-server mariadb-client mariadb-common
+ls -la /etc/mysql/conf.d/
+ls -la /etc/mysql/mariadb.conf.d/
 
-# 2. Obliterate any remnant database files and local configuration tweaks
-sudo rm -rf /var/lib/mysql /etc/mysql /etc/my.cnf /var/log/mysql
+# Backup and clear out custom config snippets that might contain syntax errors
+sudo mkdir -p /tmp/mariadb_bak_config
+sudo mv /etc/mysql/conf.d/* /tmp/mariadb_bak_config/ 2>/dev/null
+sudo mv /etc/mysql/mariadb.conf.d/* /tmp/mariadb_bak_config/ 2>/dev/null
 
-# 1. Resynchronize your package indexes
-sudo apt update
-
-# 2. Install a fresh instance (this automatically triggers a native, empty db generation)
-sudo apt install -y mariadb-server
-
-
-
-# 1. Install AppArmor management tools
-sudo apt install -y apparmor-utils
-
-# 2. Put MariaDB into permissive "complain" mode
-sudo aa-complain /usr/sbin/mariadbd
-
-# 3. Fire up the database engine
-sudo systemctl restart mariadb
-
-
-
-
-
-
-# 1. Stop the database service safely
-sudo systemctl stop mariadb
-
-# 2. Clear out InnoDB transaction logs and tablespace boundaries
-sudo rm -f /var/lib/mysql/ib_logfile*
-sudo rm -f /var/lib/mysql/ibdata1
-sudo rm -f /var/lib/mysql/aria_log*
-
-sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
-# Remove or comment out these if found:
-skip-innodb
-innodb=OFF
-innodb_buffer_pool_size = 32M
-
-# 1. Clear out the directory fully one last time
+# 1. Purge the target data directory
 sudo rm -rf /var/lib/mysql/*
 
+# 2. Force install-db using the package's default behavior
+sudo mariadb-install-db --user=mysql
 
 
-#  Rebuilt the Missing System Configuration Folders
 sudo mkdir -p /etc/mysql/conf.d/
 sudo mkdir -p /etc/mysql/mariadb.conf.d/
 sudo chmod 755 /etc/mysql/conf.d/ /etc/mysql/mariadb.conf.d/
-# Recreated the Core Storage Directory & Set Permissions
+# 1. Clear any broken data remnants
+sudo rm -rf /var/lib/mysql/*
+
+# 2. Re-initialize the master structural tables
+sudo mariadb-install-db --user=mysql
+# 1. Create the missing data directory
 sudo mkdir -p /var/lib/mysql
+
+# 2. Assign ownership to the mysql system user
 sudo chown -R mysql:mysql /var/lib/mysql
+
+# 3. Secure the directory permissions
 sudo chmod 700 /var/lib/mysql
-#  Initialized the Missing Master System Databases
-sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
-# Cleared System Blocks & Fired Up the Service
-sudo rm -f /run/mysqld/mysqld.sock
-sudo systemctl start mariadb
+
