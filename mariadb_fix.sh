@@ -1,11 +1,34 @@
-sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+# 1. Uninstall the server and purge its persistent configuration files
+sudo apt purge -y mariadb-server mariadb-client mariadb-common
 
-skip-spider
+# 2. Obliterate any remnant database files and local configuration tweaks
+sudo rm -rf /var/lib/mysql /etc/mysql /etc/my.cnf /var/log/mysql
 
-sudo rm -f /var/lib/mysql/aria_log*
+# 1. Uninstall the server and purge its persistent configuration files
+sudo apt purge -y mariadb-server mariadb-client mariadb-common
 
-# Force the system database structures to deploy cleanly
-sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
+# 2. Obliterate any remnant database files and local configuration tweaks
+sudo rm -rf /var/lib/mysql /etc/mysql /etc/my.cnf /var/log/mysql
+
+# 1. Resynchronize your package indexes
+sudo apt update
+
+# 2. Install a fresh instance (this automatically triggers a native, empty db generation)
+sudo apt install -y mariadb-server
+
+
+
+# 1. Install AppArmor management tools
+sudo apt install -y apparmor-utils
+
+# 2. Put MariaDB into permissive "complain" mode
+sudo aa-complain /usr/sbin/mariadbd
+
+# 3. Fire up the database engine
+sudo systemctl restart mariadb
+
+
+
 
 
 
